@@ -15,7 +15,7 @@ use uuid::Uuid;
 
 #[get("/healthchecker")]
 async fn health_checker_handler() -> impl Responder {
-    const MESSAGE: &str = "How to  Implement 2FA in Rust";
+    const MESSAGE: &str = "How to  Implement Two-Factor Authentication (2FA) in Rust";
 
     HttpResponse::Ok().json(json!({"status": "success", "message": MESSAGE}))
 }
