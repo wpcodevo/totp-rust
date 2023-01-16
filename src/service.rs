@@ -28,7 +28,7 @@ async fn register_user_handler(
     let mut vec = data.db.lock().unwrap();
 
     for user in vec.iter() {
-        if user.email == body.email {
+        if user.email == body.email.to_lowercase() {
             let error_response = GenericResponse {
                 status: "fail".to_string(),
                 message: format!("User with email: {} already exists", user.email),
@@ -42,7 +42,7 @@ async fn register_user_handler(
 
     let user = User {
         id: Some(uuid_id.to_string()),
-        email: body.email.to_owned(),
+        email: body.email.to_owned().to_lowercase(),
         name: body.name.to_owned(),
         password: body.password.to_owned(),
         otp_enabled: Some(false),
@@ -66,7 +66,9 @@ async fn login_user_handler(
 ) -> impl Responder {
     let vec = data.db.lock().unwrap();
 
-    let user = vec.iter().find(|user| user.email == body.email);
+    let user = vec
+        .iter()
+        .find(|user| user.email == body.email.to_lowercase());
 
     if user.is_none() {
         return HttpResponse::BadRequest()
@@ -112,9 +114,7 @@ async fn generate_otp_handler(
         6,
         1,
         30,
-        Secret::Encoded(base32_string.to_string())
-            .to_bytes()
-            .unwrap(),
+        Secret::Encoded(base32_string).to_bytes().unwrap(),
     )
     .unwrap();
 
@@ -204,6 +204,16 @@ async fn validate_otp_handler(
     }
 
     let user = user.unwrap();
+
+    if !user.otp_enabled.unwrap() {
+        let json_error = GenericResponse {
+            status: "fail".to_string(),
+            message: "2FA not enabled".to_string(),
+        };
+
+        return HttpResponse::Forbidden().json(json_error);
+    }
+
     let otp_base32 = user.otp_base32.to_owned().unwrap();
 
     let totp = TOTP::new(
